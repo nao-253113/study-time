@@ -27,7 +27,7 @@ button { cursor: pointer; }
 }
 .day {
   border: 1px solid #444;
-  min-height: 60px;
+  min-height: 70px;
   font-size: 0.8rem;
 }
 .day span {
@@ -54,10 +54,26 @@ canvas {
 
 <h1>📚 勉強タイマー</h1>
 
-<label>
-  勉強時間（分）
-  <input type="number" id="minutes" value="25">
-</label>
+<div>
+  <label>
+    教科：
+    <input type="text" id="subject" placeholder="数学 / 英語 / 化学など">
+  </label>
+</div>
+
+<div>
+  <label>
+    日付：
+    <input type="date" id="studyDate">
+  </label>
+</div>
+
+<div>
+  <label>
+    勉強時間（分）：
+    <input type="number" id="minutes" value="25">
+  </label>
+</div>
 
 <div>
   <button onclick="startTimer()">▶ 開始</button>
@@ -72,13 +88,20 @@ canvas {
 <canvas id="fireworks"></canvas>
 
 <script>
-/* ---------- タイマー ---------- */
-let timerId = null;
-let startDate = null;
+/* ---------- 初期設定 ---------- */
+const todayStr = new Date().toISOString().slice(0, 10);
+document.getElementById("studyDate").value = todayStr;
 
+let timerId = null;
+let saved = false;
+
+const events = JSON.parse(localStorage.getItem("events") || "[]");
+
+/* ---------- タイマー ---------- */
 function startTimer() {
   stopTimer(false);
-  startDate = new Date();
+  saved = false;
+
   const minutes = Number(document.getElementById("minutes").value);
   const end = Date.now() + minutes * 60000;
 
@@ -94,24 +117,24 @@ function stopTimer(save = true) {
   timerId = null;
   document.getElementById("status").textContent = "終了！";
 
-  if (save && startDate) {
-    saveEvent(startDate);
+  if (save && !saved) {
+    saveEvent();
     renderCalendar();
     launchFireworks();
+    saved = true;
   }
 }
 
 /* ---------- カレンダー ---------- */
-const calendarEl = document.getElementById("calendar");
-const events = JSON.parse(localStorage.getItem("events") || "[]");
+function saveEvent() {
+  const date = document.getElementById("studyDate").value;
+  const subject = document.getElementById("subject").value || "勉強";
 
-function saveEvent(date) {
-  events.push({
-    date: date.toISOString().slice(0, 10),
-    title: "勉強"
-  });
+  events.push({ date, subject });
   localStorage.setItem("events", JSON.stringify(events));
 }
+
+const calendarEl = document.getElementById("calendar");
 
 function renderCalendar() {
   calendarEl.innerHTML = "";
@@ -138,7 +161,7 @@ function renderCalendar() {
       .forEach(e => {
         const ev = document.createElement("div");
         ev.className = "event";
-        ev.textContent = e.title;
+        ev.textContent = e.subject;
         cell.appendChild(ev);
       });
 
@@ -151,6 +174,7 @@ renderCalendar();
 /* ---------- 花火 ---------- */
 const canvas = document.getElementById("fireworks");
 const ctx = canvas.getContext("2d");
+
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
