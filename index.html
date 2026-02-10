@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>勉強タイマー</title>
+
 <style>
 body {
   font-family: sans-serif;
@@ -15,61 +16,77 @@ input, button {
   padding: 0.5rem;
   margin: 0.3rem;
 }
+button {
+  cursor: pointer;
+}
 canvas {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   pointer-events: none;
 }
 </style>
 </head>
+
 <body>
 
 <h1>📚 勉強タイマー</h1>
 
-<label>
-  勉強時間（分）
-  <input type="number" id="minutes" value="25">
-</label>
-<br>
+<div>
+  <label>
+    勉強時間（分）
+    <input type="number" id="minutes" value="25">
+  </label>
+</div>
 
-<label>
-  開始時刻
-  <input type="datetime-local" id="startTime">
-</label>
-<br>
+<div>
+  <label>
+    開始時刻
+    <input type="datetime-local" id="startTime">
+  </label>
+</div>
 
-<button onclick="startTimer()">タイマー開始</button>
-<button onclick="addToCalendar()">📅 カレンダー登録</button>
+<div>
+  <button onclick="startTimer()">▶ 開始</button>
+  <button onclick="stopTimer()">⏹ 終了</button>
+  <button onclick="addToCalendar()">📅 カレンダー登録</button>
+</div>
 
 <h2 id="status">待機中</h2>
 
 <canvas id="fireworks"></canvas>
 
 <script>
-let timer;
-let canvas = document.getElementById("fireworks");
-let ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+let timerId = null;
+let endTime = null;
 
+/* ---------- タイマー ---------- */
 function startTimer() {
-  const minutes = document.getElementById("minutes").value;
-  const endTime = Date.now() + minutes * 60000;
+  stopTimer(false); // 二重起動防止
+
+  const minutes = Number(document.getElementById("minutes").value);
+  endTime = Date.now() + minutes * 60000;
   document.getElementById("status").textContent = "集中中…";
 
-  timer = setInterval(() => {
+  timerId = setInterval(() => {
     if (Date.now() >= endTime) {
-      clearInterval(timer);
-      document.getElementById("status").textContent = "終了！";
-      launchFireworks();
+      stopTimer(true);
     }
   }, 500);
 }
 
+function stopTimer(showFireworks = true) {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  document.getElementById("status").textContent = "終了！";
+  if (showFireworks) launchFireworks();
+}
+
+/* ---------- カレンダー ---------- */
 function addToCalendar() {
   const start = new Date(document.getElementById("startTime").value);
-  const minutes = document.getElementById("minutes").value;
+  const minutes = Number(document.getElementById("minutes").value);
   const end = new Date(start.getTime() + minutes * 60000);
 
   const ics =
@@ -94,24 +111,36 @@ function formatICS(date) {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
 
-/* 花火アニメーション */
+/* ---------- 花火 ---------- */
+const canvas = document.getElementById("fireworks");
+const ctx = canvas.getContext("2d");
+
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
 function launchFireworks() {
   let particles = [];
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 120; i++) {
     particles.push({
       x: canvas.width / 2,
       y: canvas.height / 2,
-      vx: (Math.random() - 0.5) * 6,
-      vy: (Math.random() - 0.5) * 6,
-      life: 100
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      life: 80,
+      color: `hsl(${Math.random() * 360},100%,60%)`
     });
   }
 
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     particles.forEach(p => {
-      ctx.fillStyle = "hsl(" + Math.random() * 360 + ",100%,60%)";
+      ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, 4, 4);
       p.x += p.vx;
       p.y += p.vy;
@@ -120,10 +149,10 @@ function launchFireworks() {
     particles = particles.filter(p => p.life > 0);
     if (particles.length > 0) requestAnimationFrame(animate);
   }
+
   animate();
 }
 </script>
 
 </body>
 </html>
-
